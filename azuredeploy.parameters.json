@@ -1,0 +1,26 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "cosmosDbAccountName": {
+      "value": "flighttrackerdb"
+    },
+    "keyVaultName": {
+      "value": "flighttracker-dev"
+    },
+    "objectId": {
+      "value": "GEN-AZUREAD-OBJECTID"
+    },
+    "secretsPermissions": {
+      "value": [
+        "Get",
+        "List",
+        "Set",
+        "Delete",
+        "Recover",
+        "Backup",
+        "Restore"
+      ]
+    }
+  }
+}
