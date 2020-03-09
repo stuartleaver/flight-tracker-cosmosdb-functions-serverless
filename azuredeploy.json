@@ -2,16 +2,10 @@
   "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
   "contentVersion": "1.0.0.0",
   "parameters": {
-    "cosmosDbAccountName": {
+    "appName": {
       "type": "string",
       "metadata": {
-        "description": "Specifies the name of the Cosmod DB."
-      }
-    },
-    "keyVaultName": {
-      "type": "string",
-      "metadata": {
-        "description": "Specifies the name of the key vault."
+        "description": "The name of the flight tracker app that you wish to create."
       }
     },
     "tenantId": {
@@ -38,6 +32,12 @@
     }
   },
   "variables": {
+    "cosmosDbAccountName": "[concat(parameters('appName'), 'db')]",
+    "keyVaultName": "[parameters('appName')]",
+    "functionAppName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
+    "hostingPlanName": "[concat(variables('functionAppName'), '-plan')]",
+    "storageAccountName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
+    "applicationInsightsName": "[parameters('appName')]",
     "location": "[resourceGroup().location]",
     "cosmosdbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]"
   },
@@ -46,7 +46,7 @@
       "apiVersion": "2019-12-12",
       "kind": "GlobalDocumentDB",
       "type": "Microsoft.DocumentDb/databaseAccounts",
-      "name": "[parameters('cosmosDbAccountName')]",
+      "name": "[variables('cosmosDbAccountName')]",
       "location": "[variables('location')]",
       "properties": {
         "databaseAccountOfferType": "Standard",
@@ -66,12 +66,10 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults",
-      "name": "[parameters('keyVaultName')]",
+      "name": "[variables('keyVaultName')]",
       "apiVersion": "2018-02-14",
       "location": "[variables('location')]",
-      "dependsOn": [
-
-      ],
+      "dependsOn": [],
       "properties": {
         "enabledForDeployment": false,
         "enabledForDiskEncryption": false,
@@ -97,29 +95,116 @@
       }
     },
     {
-      "type": "Microsoft.KeyVault/vaults/secrets",
-      "name": "[concat(parameters('keyVaultName'), '/', parameters('cosmosDbAccountName'), '-primarykey')]",
-      "apiVersion": "2018-02-14",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2016-12-01",
+      "location": "[variables('location')]",
+      "kind": "Storage",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "properties": {
+        "supportsHttpsTrafficOnly": true
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2018-02-01",
+      "name": "[variables('hostingPlanName')]",
+      "location": "[variables('location')]",
+      "sku": {
+        "name": "Y1",
+        "tier": "Dynamic"
+      },
+      "properties": {
+        "name": "[variables('hostingPlanName')]",
+        "computeMode": "Dynamic"
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2018-11-01",
+      "name": "[variables('functionAppName')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.DocumentDb/databaseAccounts', parameters('cosmosDbAccountName'))]"
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('microsoft.insights/components', variables('applicationInsightsName'))]"
       ],
+      "kind": "functionapp",
       "properties": {
-        "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', parameters('cosmosDbAccountName')), '2019-12-12').primaryMasterKey]"
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "siteConfig": {
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[toLower(variables('functionAppName'))]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "WEBSITE_NODE_DEFAULT_VERSION",
+              "value": "~10"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2018-05-01-preview",
+      "name": "[variables('applicationInsightsName')]",
+      "type": "microsoft.insights/components",
+      "location": "East US",
+      "tags": {
+        "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('applicationInsightsName'))]": "Resource"
+      },
+      "properties": {
+        "ApplicationId": "[variables('applicationInsightsName')]",
+        "Request_Source": "IbizaWebAppExtensionCreate"
       }
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
-      "name": "[concat(parameters('keyVaultName'), '/', parameters('cosmosDbAccountName'), '-endpoint')]",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbAccountName'), '-primarykey')]",
       "apiVersion": "2018-02-14",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.KeyVault/vaults', parameters('keyVaultName'))]",
-        "[resourceId('Microsoft.DocumentDb/databaseAccounts', parameters('cosmosDbAccountName'))]"
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDbAccountName'))]"
       ],
       "properties": {
-        "value": "[reference(concat('Microsoft.DocumentDb/databaseAccounts/', parameters('cosmosDbAccountName'))).documentEndpoint]"
+        "value": "[listKeys(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName')), '2019-12-12').primaryMasterKey]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbAccountName'), '-endpoint')]",
+      "apiVersion": "2018-02-14",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDbAccountName'))]"
+      ],
+      "properties": {
+        "value": "[reference(concat('Microsoft.DocumentDb/databaseAccounts/', variables('cosmosDbAccountName'))).documentEndpoint]"
       }
     }
   ],
