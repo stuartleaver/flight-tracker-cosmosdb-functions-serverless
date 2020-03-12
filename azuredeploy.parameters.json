@@ -7,17 +7,6 @@
     },
     "objectId": {
       "value": "GEN-AZUREAD-OBJECTID"
-    },
-    "secretsPermissions": {
-      "value": [
-        "Get",
-        "List",
-        "Set",
-        "Delete",
-        "Recover",
-        "Backup",
-        "Restore"
-      ]
     }
   }
 }

@@ -20,15 +20,6 @@
       "metadata": {
         "description": "Specifies the object ID of a user, service principal or security group in the Azure Active Directory tenant for the vault. The object ID must be unique for the list of access policies. Get it by using Get-AzADUser or Get-AzADServicePrincipal cmdlets."
       }
-    },
-    "secretsPermissions": {
-      "type": "array",
-      "defaultValue": [
-        "list"
-      ],
-      "metadata": {
-        "description": "Specifies the permissions to secrets in the vault. Valid values are: all, get, list, set, delete, backup, restore, recover, and purge."
-      }
     }
   },
   "variables": {
@@ -39,7 +30,9 @@
     "storageAccountName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
     "applicationInsightsName": "[parameters('appName')]",
     "location": "[resourceGroup().location]",
-    "cosmosdbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]"
+    "cosmosdbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]",
+    "cosmosdbEndpointSecretName": "[concat(variables('cosmosDbAccountName'), '-endpoint')]",
+    "cosmosdbPrimaryKeySecretName": "[concat(variables('cosmosDbAccountName'), '-primarykey')]"
   },
   "resources": [
     {
@@ -69,7 +62,9 @@
       "name": "[variables('keyVaultName')]",
       "apiVersion": "2018-02-14",
       "location": "[variables('location')]",
-      "dependsOn": [],
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ],
       "properties": {
         "enabledForDeployment": false,
         "enabledForDiskEncryption": false,
@@ -80,7 +75,24 @@
             "objectId": "[parameters('objectId')]",
             "tenantId": "[parameters('tenantId')]",
             "permissions": {
-              "secrets": "[parameters('secretsPermissions')]"
+              "secrets": [
+                "Get",
+                "List",
+                "Set",
+                "Delete",
+                "Recover",
+                "Backup",
+                "Restore"
+              ]
+            }
+          },
+          {
+            "objectId": "[reference(concat('Microsoft.Web/sites/', variables('functionAppName')), '2016-08-01', 'Full').identity.principalId]",
+            "tenantId": "[parameters('tenantId')]",
+            "permissions": {
+              "secrets": [
+                "Get"
+              ]
             }
           }
         ],
@@ -127,46 +139,40 @@
       "name": "[variables('functionAppName')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
-        "[resourceId('microsoft.insights/components', variables('applicationInsightsName'))]"
+        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
       ],
       "kind": "functionapp",
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
-        "siteConfig": {
-          "appSettings": [
-            {
-              "name": "AzureWebJobsStorage",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
-              "value": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]"
-            },
-            {
-              "name": "WEBSITE_CONTENTSHARE",
-              "value": "[toLower(variables('functionAppName'))]"
-            },
-            {
-              "name": "FUNCTIONS_EXTENSION_VERSION",
-              "value": "~3"
-            },
-            {
-              "name": "WEBSITE_NODE_DEFAULT_VERSION",
-              "value": "~10"
-            },
-            {
-              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
-              "value": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]"
-            },
-            {
-              "name": "FUNCTIONS_WORKER_RUNTIME",
-              "value": "dotnet"
-            }
-          ]
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+      },
+      "resources": [
+        {
+          "name": "appsettings",
+          "type": "config",
+          "apiVersion": "2019-08-01",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+            "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+            "[resourceId('microsoft.insights/components', variables('applicationInsightsName'))]",
+            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosdbEndpointSecretName'))]",
+            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosdbPrimaryKeySecretName'))]"
+          ],
+          "properties": {
+            "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+            "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
+            "WEBSITE_CONTENTSHARE": "[toLower(variables('functionAppName'))]",
+            "FUNCTIONS_EXTENSION_VERSION": "~3",
+            "WEBSITE_NODE_DEFAULT_VERSION": "~10",
+            "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]",
+            "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+            "CosmosDBEndpoint": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosdbEndpointSecretName')).secretUriWithVersion, ')')]",
+            "CosmosDBPrimaryKey": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosdbPrimaryKeySecretName')).secretUriWithVersion, ')')]"
+          }
         }
-      }
+      ]
     },
     {
       "apiVersion": "2018-05-01-preview",
@@ -183,7 +189,7 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
-      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbAccountName'), '-primarykey')]",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbPrimaryKeySecretName'))]",
       "apiVersion": "2018-02-14",
       "location": "[variables('location')]",
       "dependsOn": [
@@ -196,7 +202,7 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
-      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbAccountName'), '-endpoint')]",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbEndpointSecretName'))]",
       "apiVersion": "2018-02-14",
       "location": "[variables('location')]",
       "dependsOn": [
