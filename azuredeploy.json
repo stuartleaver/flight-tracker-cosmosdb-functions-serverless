@@ -3,20 +3,20 @@
   "contentVersion": "1.0.0.0",
   "parameters": {
     "appName": {
-      "type": "string",
+      "type": "String",
       "metadata": {
         "description": "The name of the flight tracker app that you wish to create."
       }
     },
     "tenantId": {
-      "type": "string",
       "defaultValue": "[subscription().tenantId]",
+      "type": "String",
       "metadata": {
         "description": "Specifies the Azure Active Directory tenant ID that should be used for authenticating requests to the key vault. Get it by using Get-AzSubscription cmdlet."
       }
     },
     "objectId": {
-      "type": "string",
+      "type": "String",
       "metadata": {
         "description": "Specifies the object ID of a user, service principal or security group in the Azure Active Directory tenant for the vault. The object ID must be unique for the list of access policies. Get it by using Get-AzADUser or Get-AzADServicePrincipal cmdlets."
       }
@@ -38,11 +38,16 @@
   },
   "resources": [
     {
-      "apiVersion": "2019-12-12",
-      "kind": "GlobalDocumentDB",
       "type": "Microsoft.DocumentDb/databaseAccounts",
+      "apiVersion": "2019-12-12",
       "name": "[variables('cosmosDbAccountName')]",
       "location": "[variables('location')]",
+      "tags": {
+        "defaultExperience": "Core (SQL)",
+        "hidden-cosmos-mmspecial": "",
+        "CosmosAccountType": "Non-Production"
+      },
+      "kind": "GlobalDocumentDB",
       "properties": {
         "databaseAccountOfferType": "Standard",
         "enableMultipleWriteLocations": false,
@@ -52,11 +57,6 @@
         "dependsOn": [],
         "capabilities": [],
         "enableFreeTier": true
-      },
-      "tags": {
-        "defaultExperience": "Core (SQL)",
-        "hidden-cosmos-mmspecial": "",
-        "CosmosAccountType": "Non-Production"
       }
     },
     {
@@ -112,8 +112,8 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults",
-      "name": "[variables('keyVaultName')]",
       "apiVersion": "2018-02-14",
+      "name": "[variables('keyVaultName')]",
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
@@ -161,13 +161,13 @@
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
-      "name": "[variables('storageAccountName')]",
       "apiVersion": "2016-12-01",
+      "name": "[variables('storageAccountName')]",
       "location": "[variables('location')]",
-      "kind": "Storage",
       "sku": {
         "name": "Standard_LRS"
       },
+      "kind": "Storage",
       "properties": {
         "supportsHttpsTrafficOnly": true
       }
@@ -203,9 +203,9 @@
       },
       "resources": [
         {
-          "name": "appsettings",
           "type": "config",
           "apiVersion": "2019-08-01",
+          "name": "appsettings",
           "dependsOn": [
             "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
             "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
@@ -228,9 +228,9 @@
       ]
     },
     {
+      "type": "microsoft.insights/components",
       "apiVersion": "2018-05-01-preview",
       "name": "[variables('applicationInsightsName')]",
-      "type": "microsoft.insights/components",
       "location": "East US",
       "tags": {
         "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.Web/sites/', variables('applicationInsightsName'))]": "Resource"
@@ -242,8 +242,8 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
-      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbPrimaryKeySecretName'))]",
       "apiVersion": "2018-02-14",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbPrimaryKeySecretName'))]",
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -255,8 +255,8 @@
     },
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
-      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbEndpointSecretName'))]",
       "apiVersion": "2018-02-14",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbEndpointSecretName'))]",
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
