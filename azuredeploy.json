@@ -30,11 +30,12 @@
     "storageAccountName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
     "applicationInsightsName": "[parameters('appName')]",
     "location": "[resourceGroup().location]",
-    "cosmosdbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]",
-    "cosmosdbEndpointSecretName": "[concat(variables('cosmosDbAccountName'), '-endpoint')]",
-    "cosmosdbPrimaryKeySecretName": "[concat(variables('cosmosDbAccountName'), '-primarykey')]",
-    "cosmosdbDatabaseName": "flighttracker",
-    "cosmosdbDatabaseContainerName": "flights"
+    "cosmosDbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]",
+    "cosmosDbEndpointSecretName": "[concat(variables('cosmosDbAccountName'), '-endpoint')]",
+    "cosmosDbPrimaryKeySecretName": "[concat(variables('cosmosDbAccountName'), '-primarykey')]",
+    "cosmosDbConnectionStringSecretName": "CosmosDbConnectionString",
+    "cosmosDbDatabaseName": "flighttracker",
+    "cosmosDbDatabaseContainerName": "flights"
   },
   "resources": [
     {
@@ -62,26 +63,26 @@
     {
       "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
       "apiVersion": "2020-03-01",
-      "name": "[concat(variables('cosmosDbAccountName'), '/', variables('cosmosdbDatabaseName'))]",
+      "name": "[concat(variables('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'))]",
       "dependsOn": [
         "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName'))]"
       ],
       "properties": {
         "resource": {
-          "id": "[variables('cosmosdbDatabaseName')]"
+          "id": "[variables('cosmosDbDatabaseName')]"
         }
       }
     },
     {
       "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
       "apiVersion": "2020-03-01",
-      "name": "[concat(variables('cosmosDbAccountName'), '/', variables('cosmosdbDatabaseName'), '/', variables('cosmosdbDatabaseContainerName'))]",
+      "name": "[concat(variables('cosmosDbAccountName'), '/', variables('cosmosDbDatabaseName'), '/', variables('cosmosDbDatabaseContainerName'))]",
       "dependsOn": [
-        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbAccountName'), variables('cosmosdbDatabaseName'))]"
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbAccountName'), variables('cosmosDbDatabaseName'))]"
       ],
       "properties": {
         "resource": {
-          "id": "[variables('cosmosdbDatabaseContainerName')]",
+          "id": "[variables('cosmosDbDatabaseContainerName')]",
           "indexingPolicy": {
             "indexingMode": "consistent",
             "automatic": true,
@@ -210,8 +211,9 @@
             "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
             "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
             "[resourceId('microsoft.insights/components', variables('applicationInsightsName'))]",
-            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosdbEndpointSecretName'))]",
-            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosdbPrimaryKeySecretName'))]"
+            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosDbEndpointSecretName'))]",
+            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosDbPrimaryKeySecretName'))]",
+            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosDbConnectionStringSecretName'))]"
           ],
           "properties": {
             "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
@@ -221,8 +223,9 @@
             "WEBSITE_NODE_DEFAULT_VERSION": "~10",
             "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]",
             "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-            "CosmosDBEndpoint": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosdbEndpointSecretName')).secretUriWithVersion, ')')]",
-            "CosmosDBPrimaryKey": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosdbPrimaryKeySecretName')).secretUriWithVersion, ')')]"
+            "CosmosDBEndpoint": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosDbEndpointSecretName')).secretUriWithVersion, ')')]",
+            "CosmosDBPrimaryKey": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosDbPrimaryKeySecretName')).secretUriWithVersion, ')')]",
+            "CosmosDbConnectionString": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosDbConnectionStringSecretName')).secretUriWithVersion, ')')]"
           }
         }
       ]
@@ -243,7 +246,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbPrimaryKeySecretName'))]",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbPrimaryKeySecretName'))]",
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -256,7 +259,7 @@
     {
       "type": "Microsoft.KeyVault/vaults/secrets",
       "apiVersion": "2018-02-14",
-      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosdbEndpointSecretName'))]",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbEndpointSecretName'))]",
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
@@ -264,6 +267,19 @@
       ],
       "properties": {
         "value": "[reference(concat('Microsoft.DocumentDb/databaseAccounts/', variables('cosmosDbAccountName'))).documentEndpoint]"
+      }
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(variables('keyVaultName'), '/', variables('cosmosDbConnectionStringSecretName'))]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
+        "[resourceId('Microsoft.DocumentDb/databaseAccounts', variables('cosmosDbAccountName'))]"
+      ],
+      "properties": {
+        "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName')), '2019-12-12').connectionStrings[0].connectionString]"
       }
     }
   ],
