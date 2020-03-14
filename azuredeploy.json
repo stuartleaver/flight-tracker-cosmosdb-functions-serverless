@@ -32,7 +32,9 @@
     "location": "[resourceGroup().location]",
     "cosmosdbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]",
     "cosmosdbEndpointSecretName": "[concat(variables('cosmosDbAccountName'), '-endpoint')]",
-    "cosmosdbPrimaryKeySecretName": "[concat(variables('cosmosDbAccountName'), '-primarykey')]"
+    "cosmosdbPrimaryKeySecretName": "[concat(variables('cosmosDbAccountName'), '-primarykey')]",
+    "cosmosdbDatabaseName": "flighttracker",
+    "cosmosdbDatabaseContainerName": "flights"
   },
   "resources": [
     {
@@ -55,6 +57,57 @@
         "defaultExperience": "Core (SQL)",
         "hidden-cosmos-mmspecial": "",
         "CosmosAccountType": "Non-Production"
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2020-03-01",
+      "name": "[concat(variables('cosmosDbAccountName'), '/', variables('cosmosdbDatabaseName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "[variables('cosmosdbDatabaseName')]"
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2020-03-01",
+      "name": "[concat(variables('cosmosDbAccountName'), '/', variables('cosmosdbDatabaseName'), '/', variables('cosmosdbDatabaseContainerName'))]",
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', variables('cosmosDbAccountName'), variables('cosmosdbDatabaseName'))]"
+      ],
+      "properties": {
+        "resource": {
+          "id": "[variables('cosmosdbDatabaseContainerName')]",
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/\"_etag\"/?"
+              }
+            ]
+          },
+          "partitionKey": {
+            "paths": [
+              "/originCountry"
+            ],
+            "kind": "Hash"
+          },
+          "conflictResolutionPolicy": {
+            "mode": "LastWriterWins",
+            "conflictResolutionPath": "/_ts"
+          }
+        },
+        "options": {}
       }
     },
     {
