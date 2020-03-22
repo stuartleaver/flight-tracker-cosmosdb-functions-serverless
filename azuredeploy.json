@@ -255,6 +255,9 @@
       "dependsOn": [
         "[concat('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
       ],
+      "identity": {
+        "type": "SystemAssigned"
+      },
       "properties": {
         "name": "[variables('webAppPortalName')]",
         "siteConfig": {
