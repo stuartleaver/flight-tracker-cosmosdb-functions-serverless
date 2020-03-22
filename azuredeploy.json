@@ -35,7 +35,9 @@
     "cosmosDbDatabaseName": "flighttracker",
     "cosmosDbDatabaseContainerName": "flights",
     "webAppPortalName": "[concat(substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24), '-webapp')]",
-    "appServicePlanName": "[concat(variables('webAppPortalName'), '-plan')]"
+    "appServicePlanName": "[concat(variables('webAppPortalName'), '-plan')]",
+    "mapsAccountName": "[concat(parameters('appName'), '-map')]",
+    "AzureMapsDataReaderRole": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '423170ca-a8f6-4b0f-8487-9e4eb8f49bfa')]"
   },
   "resources": [
     {
@@ -294,6 +296,29 @@
       ],
       "properties": {
         "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', variables('cosmosDbAccountName')), '2019-12-12').connectionStrings[0].connectionString]"
+      }
+    },
+    {
+      "apiVersion": "2018-05-01",
+      "name": "[variables('mapsAccountName')]",
+      "location": "global",
+      "type": "Microsoft.Maps/accounts",
+      "sku": {
+        "name": "S0"
+      }
+    },
+    {
+      "apiVersion": "2018-09-01-preview",
+      "name": "[concat(variables('mapsAccountName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]",
+      "type": "Microsoft.Maps/accounts/providers/roleAssignments",
+      "dependsOn": [
+        "[resourceId('Microsoft.Maps/accounts', variables('mapsAccountName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
+      ],
+      "properties": {
+        "roleDefinitionId": "[variables('AzureMapsDataReaderRole')]",
+        "principalId": "[reference(concat('Microsoft.Web/sites/', variables('webAppPortalName')), '2016-08-01', 'Full').identity.principalId]",
+        "principalType": "ServicePrincipal"
       }
     }
   ],
