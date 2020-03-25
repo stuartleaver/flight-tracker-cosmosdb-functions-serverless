@@ -150,3 +150,35 @@ An example of the syntax used in this example is:
 `@Microsoft.KeyVault(SecretUri=https://myvault.vault.azure.net/secrets/mysecret/ec96f02080254f109c51a1f14cdb1931)`
 
 ![key-vault-reference-shown](assets/key-vault-reference-shown.png)
+
+## Azure Maps
+As flights need to be displayed on a map, Azure Maps will be used. [What is Azure Maps?](https://docs.microsoft.com/en-us/azure/azure-maps/about-azure-maps):
+>Azure Maps is a collection of geospatial services that use fresh mapping data to provide geographic context to web and mobile applications. Azure Maps provides:
+* REST APIs to render maps in multiple styles and in satellite imagery.
+* Search services to locate addresses, places, and points of interest around the world.
+* Various routing options; such as point-to-point, multipoint, multipoint optimization, isochrone, commercial vehicle, traffic influenced, and matrix routing.
+* Traffic flow view and incidents view, for applications that require traffic information.
+* Mobility service to request public transit logistics, plan routes in real time, and request information for alternative modes of transportation.
+* Time zone and geolocation services and converting a location to time zones.
+Geofencing service and mapping data storage, with location information hosted in Azure.
+Location intelligence through geospatial analytics.
+
+More information can be found in the [documentation](https://docs.microsoft.com/en-us/azure/azure-maps/).
+
+### Note on Azure Maps Authentication
+From [Authentication with Azure Maps](https://docs.microsoft.com/bs-cyrl-ba/azure/azure-maps/azure-maps-authentication):
+> Azure Maps supports two ways to authenticate requests: Shared Key authentication and Azure Active Directory authentication.
+
+To authenticate with the shared key approach, the following JavaScript code needs to go in the page:
+
+```javascript
+authOptions: {
+  authType: 'subscriptionKey',
+  subscriptionKey: '<Azure Maps Primary Key>'
+}
+```
+This therefore makes the primary key visible to anyone who looks at the page source. This makes authentication via Azure Active Directory (AAD) a much secure way.
+
+To [Manage authentication in Azure Maps](https://docs.microsoft.com/en-gb/azure/azure-maps/how-to-manage-authentication), it is necessary to create an App Registration is AAD. Depending on the settings of an Azure Subscription, administrator permissions maybe required. So there is a change that running the ARM template may result in permission issues depending on the users subscription.
+
+Shared Key authentication is therefore used in the sample to avoid those issues. However, the primary key is retrieved from the KeyVault to demo [Azure Key Vault Configuration Provider in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/key-vault-configuration?view=aspnetcore-3.1#secret-storage-in-the-production-environment-with-azure-key-vault).
