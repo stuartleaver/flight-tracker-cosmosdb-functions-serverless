@@ -1,4 +1,6 @@
-﻿@{
+﻿@using Microsoft.Extensions.Configuration
+@inject IConfiguration Configuration
+@{
     ViewData["Title"] = "Home Page";
 }
 
@@ -7,3 +9,18 @@
     <p>Serverless solution showing how flights can be tracked using Azure Cosmos DB, Functions and SignalR.</p>
     <p>Learn about it at the <a href="https://github.com/stuartleaver/flight-tracker-cosmosdb-functions-serverless" target="new">GitHub repository</a>.</p>
 </div>
+<br />
+<div id="myMap"></div>
+
+<script type="text/javascript">
+    //Create an instance of the map control and set some options.
+    var map = new atlas.Map('myMap', {
+        center: [-4.2119, 54.521],
+        zoom: 5.5,
+        language: 'en-US',
+        authOptions: {
+            authType: 'subscriptionKey',
+            subscriptionKey: @Html.Raw("'" + @Configuration["MapsPrimaryKey"] + "'")
+        }
+    });
+</script>
