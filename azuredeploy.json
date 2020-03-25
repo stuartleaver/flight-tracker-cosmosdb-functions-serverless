@@ -37,7 +37,7 @@
     "webAppPortalName": "[concat(substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24), '-webapp')]",
     "appServicePlanName": "[concat(variables('webAppPortalName'), '-plan')]",
     "mapsAccountName": "[concat(parameters('appName'), '-map')]",
-    "AzureMapsDataReaderRole": "[subscriptionResourceId('Microsoft.Authorization/roleDefinitions', '423170ca-a8f6-4b0f-8487-9e4eb8f49bfa')]"
+    "mapsAccountPrimaryKeySecretName": "MapsPrimaryKey"
   },
   "resources": [
     {
@@ -119,7 +119,8 @@
       "name": "[variables('keyVaultName')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
       ],
       "properties": {
         "enabledForDeployment": false,
@@ -148,6 +149,16 @@
             "permissions": {
               "secrets": [
                 "Get"
+              ]
+            }
+          },
+          {
+            "objectId": "[reference(concat('Microsoft.Web/sites/', variables('webAppPortalName')), '2016-08-01', 'Full').identity.principalId]",
+            "tenantId": "[parameters('tenantId')]",
+            "permissions": {
+              "secrets": [
+                "Get",
+                "List"
               ]
             }
           }
@@ -299,26 +310,24 @@
       }
     },
     {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(variables('keyVaultName'), '/', variables('mapsAccountPrimaryKeySecretName'))]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
+      ],
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.Maps/accounts', variables('mapsAccountName')), providers('Microsoft.Maps', 'accounts').apiVersions[0]).primaryKey]"
+      }
+    },
+    {
       "apiVersion": "2018-05-01",
       "name": "[variables('mapsAccountName')]",
       "location": "global",
       "type": "Microsoft.Maps/accounts",
       "sku": {
         "name": "S0"
-      }
-    },
-    {
-      "apiVersion": "2018-09-01-preview",
-      "name": "[concat(variables('mapsAccountName'), '/Microsoft.Authorization/', guid(subscription().subscriptionId))]",
-      "type": "Microsoft.Maps/accounts/providers/roleAssignments",
-      "dependsOn": [
-        "[resourceId('Microsoft.Maps/accounts', variables('mapsAccountName'))]",
-        "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
-      ],
-      "properties": {
-        "roleDefinitionId": "[variables('AzureMapsDataReaderRole')]",
-        "principalId": "[reference(concat('Microsoft.Web/sites/', variables('webAppPortalName')), '2016-08-01', 'Full').identity.principalId]",
-        "principalType": "ServicePrincipal"
       }
     }
   ],
