@@ -1,4 +1,3 @@
-using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
@@ -11,7 +10,7 @@ namespace flighttracker.functions
     public static class GetFlightData
     {
         [FunctionName("GetFlightData")]
-        public static async Task<IActionResult> Run(
+        public static IActionResult Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "getflightdata")] HttpRequest req,
             [CosmosDB(
                 databaseName: "flighttracker",
