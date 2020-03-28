@@ -23,4 +23,51 @@
             subscriptionKey: @Html.Raw("'" + @Configuration["MapsPrimaryKey"] + "'")
         }
     });
+
+    //Wait until the map resources are ready.
+    map.events.add('ready', function () {
+        //Load the custom image icon into the map resources.
+        map.imageSprite.add('airplane-ascent', 'https://localhost:5001/images/airplane-ascent-128.png').then(function () {
+            //Create a data source and add it to the map.
+            var dataSource = new atlas.source.DataSource();
+            map.sources.add(dataSource);
+            
+            //Create a symbol layer using the data source and add it to the map
+            map.layers.add(new atlas.layer.SymbolLayer(dataSource, null, {
+                iconOptions: {
+                    //Pass in the id of the custom icon that was loaded into the map resources.
+                    image: 'airplane-ascent',
+
+                    //Optionally scale the size of the icon.
+                    size: 0.3
+                },
+                textOptions: {
+                    //Convert the temperature property of each feature into a string and concatenate "°F".
+                    textField: ['concat', ['to-string', ['get', 'name']], '- ', ['get', 'altitude']],
+
+                    //Offset the text so that it appears on top of the icon.
+                    offset: [0, -2]
+                }
+            }));
+
+            GetFlightData().then(function (response) {
+                for (var flight of response.data) {
+                    var pin = new atlas.Shape(new atlas.data.Point([flight.longitude, flight.latitude]));
+
+                    pin.addProperty('name', flight.callsign);
+                    pin.addProperty('altitude', flight.altitude);
+                    pin.addProperty('rotation', flight.rotation);
+
+                    dataSource.add(pin);
+                }
+            });
+        });
+    });
+
+    function GetFlightData() {
+        return axios.get('https://localhost:7071/api/getflightdata')
+        .then(function (response) {
+            return response;
+        }).catch(console.error)
+}
 </script>
