@@ -182,3 +182,16 @@ This therefore makes the primary key visible to anyone who looks at the page sou
 To [Manage authentication in Azure Maps](https://docs.microsoft.com/en-gb/azure/azure-maps/how-to-manage-authentication), it is necessary to create an App Registration is AAD. Depending on the settings of an Azure Subscription, administrator permissions maybe required. So there is a change that running the ARM template may result in permission issues depending on the users subscription.
 
 Shared Key authentication is therefore used in the sample to avoid those issues. However, the primary key is retrieved from the KeyVault to demo [Azure Key Vault Configuration Provider in ASP.NET Core](https://docs.microsoft.com/en-us/aspnet/core/security/key-vault-configuration?view=aspnetcore-3.1#secret-storage-in-the-production-environment-with-azure-key-vault).
+
+### Map Data & Symbols
+Once the map is in place, the flight data can be added with images showing where the flights are based on their longitude and latitude. This can be done in two steps:
+* Create a data source. The Azure Maps Web SDK stores data in data sources.
+* Add a symbol Layer. This allows you to connect a symbol to a data source, and use it to render an icon or a text at a given point.
+
+Microsoft provide documentation on both how to [create a data source](https://docs.microsoft.com/en-us/azure/azure-maps/create-data-source-web-sdk) and how to [add a symbol layer](https://docs.microsoft.com/en-us/azure/azure-maps/map-add-pin).
+
+## Retrieving Data from Cosmos DB
+As part of the data source for the map, the data needs to be retrieved from the Cosmos DB. To do this, a JavaScript library called [axios](https://github.com/axios/axios) is used and this calls another Azure Function. The Azure Function, named `GetFlightData` if you are looking it up in the source, uses the Cosmos DB binding to retrieve the documents from the container.
+
+This section hasn't gone into much detail as the bigger part will be coming up, but in terms of axios, this is from their GitHub repository:
+>Promise based HTTP client for the browser and node.js
