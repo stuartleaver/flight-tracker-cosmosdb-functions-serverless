@@ -195,3 +195,6 @@ As part of the data source for the map, the data needs to be retrieved from the 
 
 This section hasn't gone into much detail as the bigger part will be coming up, but in terms of axios, this is from their GitHub repository:
 >Promise based HTTP client for the browser and node.js
+
+## License
+[MIT](LICENSE)
