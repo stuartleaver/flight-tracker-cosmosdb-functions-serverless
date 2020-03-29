@@ -190,6 +190,11 @@ Once the map is in place, the flight data can be added with images showing where
 
 Microsoft provide documentation on both how to [create a data source](https://docs.microsoft.com/en-us/azure/azure-maps/create-data-source-web-sdk) and how to [add a symbol layer](https://docs.microsoft.com/en-us/azure/azure-maps/map-add-pin).
 
+### Map Popup's
+If to much information was added to the map, there would be an information overload. Azure Maps gives the ability to add a popup to the map, so that when someone clicks on one of the flights, more information can be displayed.
+
+For more information on how to add a popup to a map, see the [documentation](https://docs.microsoft.com/en-us/azure/azure-maps/map-add-popup).
+
 ## Retrieving Data from Cosmos DB
 As part of the data source for the map, the data needs to be retrieved from the Cosmos DB. To do this, a JavaScript library called [axios](https://github.com/axios/axios) is used and this calls another Azure Function. The Azure Function, named `GetFlightData` if you are looking it up in the source, uses the Cosmos DB binding to retrieve the documents from the container.
 
