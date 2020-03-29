@@ -13,6 +13,9 @@
 <div id="myMap"></div>
 
 <script type="text/javascript">
+    // Set the colour of the images to use
+    var imageSpriteColour = 'red'
+
     //Create an instance of the map control and set some options.
     var map = new atlas.Map('myMap', {
         center: [-4.2119, 54.521],
@@ -24,16 +27,27 @@
         }
     });
 
+    //Define an HTML template for a custom popup content laypout.
+    var popupTemplate = '<div class="customInfobox">\
+        <div class="name">Callsign: {name}</div>\
+        <div>Origin: {origin}</div>\
+        <div>Long: {longitude}, Lat: {latitude}</div>\
+        <div>Altitude: {altitude}</div>\
+        <div>Velocity: {velocity}</div>\
+        <div>Rotation: <img src="../images/' + imageSpriteColour + '/{rotationImage}"></div>\
+        <div>Squawk: {squawk}</div>\
+        </div>';
+
     //Wait until the map resources are ready.
     map.events.add('ready', function () {
         //Load the custom image icon into the map resources.
-        map.imageSprite.add('airplane-ascent', 'https://localhost:5001/images/airplane-ascent-128.png').then(function () {
+        map.imageSprite.add('airplane-ascent', 'https://localhost:5001/images/' + imageSpriteColour + '/airplane-ascent-128.png').then(function () {
             //Create a data source and add it to the map.
-            var dataSource = new atlas.source.DataSource();
-            map.sources.add(dataSource);
-            
-            //Create a symbol layer using the data source and add it to the map
-            map.layers.add(new atlas.layer.SymbolLayer(dataSource, null, {
+            var datasource = new atlas.source.DataSource();
+            map.sources.add(datasource);
+
+            //Add a layer for rendering point data as symbols.
+            var symbolLayer = new atlas.layer.SymbolLayer(datasource, null, {
                 iconOptions: {
                     //Pass in the id of the custom icon that was loaded into the map resources.
                     image: 'airplane-ascent',
@@ -48,19 +62,84 @@
                     //Offset the text so that it appears on top of the icon.
                     offset: [0, -2]
                 }
-            }));
+            });
+            map.layers.add(symbolLayer);
 
+            //Create a popup but leave it closed so we can update it and display it later.
+            popup = new atlas.Popup({
+                pixelOffset: [0, -18]
+            });
+
+            //Add a click event to the symbol layer.
+            map.events.add('click', symbolLayer, symbolClicked);
+            
             GetFlightData().then(function (response) {
                 for (var flight of response.data) {
                     var pin = new atlas.Shape(new atlas.data.Point([flight.longitude, flight.latitude]));
 
                     pin.addProperty('name', flight.callsign);
+                    pin.addProperty('origin', flight.originCountry);
+                    pin.addProperty('longitude', flight.longitude);
+                    pin.addProperty('latitude', flight.latitude);
                     pin.addProperty('altitude', flight.altitude);
-                    pin.addProperty('rotation', flight.rotation);
+                    pin.addProperty('velocity', flight.velocity);
+                    pin.addProperty('rotation', flight.verticalRate);
+                    pin.addProperty('squawk', flight.squawk);
 
-                    dataSource.add(pin);
+                    datasource.add(pin);
                 }
             });
+
+            function symbolClicked(e) {
+                //Make sure the event occured on a point feature.
+                if (e.shapes && e.shapes.length > 0) {
+                    var content, coordinate;
+
+                    
+            
+                    //Check to see if the first value in the shapes array is a Point Shape.
+                    if (e.shapes[0] instanceof atlas.Shape && e.shapes[0].getType() === 'Point') {
+                        var properties = e.shapes[0].getProperties();
+
+                        //Check to see what image needs to be used based on rotation
+                        var rotationImage
+                        if (properties.rotation == 0 || properties.rotation == null) {
+                            rotationImage = 'airplane-32.png'
+                        } else if (properties.rotation > 0) {
+                            rotationImage = 'airplane-ascent-32.png'
+                        } else if (properties.rotation < 0) {
+                            rotationImage = 'airplane-descent-32.png'
+                        }
+
+                        content = popupTemplate.replace(/{name}/g, properties.name).replace(/{origin}/g, properties.origin).replace(/{longitude}/g, properties.longitude).replace(/{latitude}/g, properties.latitude).replace(/{altitude}/g, properties.altitude).replace(/{velocity}/g, properties.velocity).replace(/{rotationImage}/g, rotationImage).replace(/{squawk}/g, properties.squawk);
+                        coordinate = e.shapes[0].getCoordinates();
+                    } else if (e.shapes[0].type === 'Feature' && e.shapes[0].geometry.type === 'Point') {
+                        //Check to see if the feature is a cluster.
+                        if (e.shapes[0].properties.cluster) {
+                            content = '<div style="padding:10px;">Cluster of ' + e.shapes[0].properties.point_count + ' symbols</div>';
+                        } else {
+                            //Feature is likely from a VectorTileSource.
+                            content = popupTemplate.replace(/{name}/g, properties.name).replace(/{origin}/g, properties.origin).replace(/{longitude}/g, properties.longitude).replace(/{latitude}/g, properties.latitude).replace(/{altitude}/g, properties.altitude).replace(/{velocity}/g, properties.velocity).replace(/{rotationImage}/g, rotationImage).replace(/{squawk}/g, properties.squawk);
+                        }
+            
+                        coordinate = e.shapes[0].geometry.coordinates;
+                    }
+        
+                    if (content && coordinate) {
+                        //Populate the popupTemplate with data from the clicked point feature.
+                        popup.setOptions({
+                            //Update the content of the popup.
+                            content: content,
+                
+                            //Update the position of the popup with the symbols coordinate.
+                            position: coordinate
+                        });
+            
+                        //Open the popup.
+                        popup.open(map);
+                    }
+                }
+            }
         });
     });
 
@@ -69,5 +148,7 @@
         .then(function (response) {
             return response;
         }).catch(console.error)
+
+    
 }
 </script>
