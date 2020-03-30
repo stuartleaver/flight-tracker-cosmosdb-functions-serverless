@@ -23,6 +23,7 @@
     }
   },
   "variables": {
+    "name_suffix": "[uniqueString(resourceGroup().id)]",
     "cosmosDbAccountName": "[concat(parameters('appName'), 'db')]",
     "keyVaultName": "[parameters('appName')]",
     "functionAppName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
@@ -37,7 +38,9 @@
     "webAppPortalName": "[concat(substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24), '-webapp')]",
     "appServicePlanName": "[concat(variables('webAppPortalName'), '-plan')]",
     "mapsAccountName": "[concat(parameters('appName'), '-map')]",
-    "mapsAccountPrimaryKeySecretName": "MapsPrimaryKey"
+    "mapsAccountPrimaryKeySecretName": "MapsPrimaryKey",
+    "signalRName": "[concat(parameters('appName'), '-', variables('name_suffix'))]",
+    "signalRConnectionStringSecretName": "SignalRConnectionString"
   },
   "resources": [
     {
@@ -244,6 +247,7 @@
             "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
             "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
             "[resourceId('microsoft.insights/components', variables('applicationInsightsName'))]",
+            "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosDbConnectionStringSecretName'))]",
             "[resourceId('Microsoft.KeyVault/vaults/secrets', variables('keyVaultName'), variables('cosmosDbConnectionStringSecretName'))]"
           ],
           "properties": {
@@ -254,7 +258,8 @@
             "WEBSITE_NODE_DEFAULT_VERSION": "~10",
             "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]",
             "FUNCTIONS_WORKER_RUNTIME": "dotnet",
-            "CosmosDbConnectionString": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosDbConnectionStringSecretName')).secretUriWithVersion, ')')]"
+            "CosmosDbConnectionString": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('cosmosDbConnectionStringSecretName')).secretUriWithVersion, ')')]",
+            "AzureSignalRConnectionString": "[concat('@Microsoft.KeyVault(SecretUri=', reference(variables('signalRConnectionStringSecretName')).secretUriWithVersion, ')')]"
           }
         }
       ]
@@ -322,12 +327,43 @@
       }
     },
     {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2018-02-14",
+      "name": "[concat(variables('keyVaultName'), '/', variables('signalRConnectionStringSecretName'))]",
+      "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.SignalRService/SignalR', variables('signalRName'))]"
+      ],
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.SignalRService/SignalR', variables('signalRName')), providers('Microsoft.SignalRService', 'SignalR').apiVersions[0]).primaryConnectionString]"
+      }
+    },
+    {
       "apiVersion": "2018-05-01",
       "name": "[variables('mapsAccountName')]",
       "location": "global",
       "type": "Microsoft.Maps/accounts",
       "sku": {
         "name": "S0"
+      }
+    },
+    {
+      "type": "Microsoft.SignalRService/SignalR",
+      "name": "[variables('signalRName')]",
+      "apiVersion": "2018-10-01",
+      "location": "[variables('location')]",
+      "properties": {
+        "hostNamePrefix": "[variables('signalRName')]",
+        "features": [
+          {
+            "flag": "ServiceMode",
+            "value": "Default"
+          }
+        ]
+      },
+      "sku": {
+        "name": "Free_F1",
+        "capacity": "1"
       }
     }
   ],
