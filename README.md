@@ -201,5 +201,26 @@ As part of the data source for the map, the data needs to be retrieved from the 
 This section hasn't gone into much detail as the bigger part will be coming up, but in terms of axios, this is from their GitHub repository:
 >Promise based HTTP client for the browser and node.js
 
+## SignalR
+In the [Architecture](#architecture) section, it showed that a SignalR service would be part of the solution. The [documentation](https://docs.microsoft.com/en-us/azure/azure-signalr/signalr-concept-azure-functions#signalr-service-bindings-for-azure-functions) says the following about the use of SignalR:
+>The SignalR Service bindings for Azure Functions allow an Azure Function app to publish messages to clients connected to SignalR Service. Clients can connect to the service using a SignalR client SDK that is available in .NET, JavaScript, and Java, with more languages coming soon.
+
+Similar to other bindings, there is an input and output binding. However, the input binding is slightly different. The [SignalR Service input binding for Azure Functions](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-signalr-service-input?tabs=csharp) documentation says the following:
+>Before a client can connect to Azure SignalR Service, it must retrieve the service endpoint URL and a valid access token. The SignalRConnectionInfo input binding produces the SignalR Service endpoint URL and a valid token that are used to connect to the service. Because the token is time-limited and can be used to authenticate a specific user to a connection, you should not cache the token or share it between clients. An HTTP trigger using this binding can be used by clients to retrieve the connection information.
+
+The connection information that is returned likes like the following:
+```json
+{
+  "url":"https://flighttracker-lucbxxxxxr5le.service.signalr.net/client/?hub=flightdata",
+  "accessToken":"eyJhbGciOiJIUzI1NiIsxxxxxCI6Ii02MTA2MTA0NDMiLCJ0eXAiOixxxxxifQ.eyJuYmYiOjE1ODU1OTQzODcsImV4xxxxxTU4NTU5Nzk4NywiaWF0IjoxNTg1xxxxxzg3LCJhdWQiOiJodHRwczovL2ZsaWdodHRyYWNrZXItbHVjYndtN21scjVsZS5zxxxxxWNlLnNpZ25hbHIubmV0L2NsaWxxxxx_aHViPWZsaWdodGRhdGEifQ.m3eutKxxxxxlUJ9zbtPPoawlOtZ2Yrq1NqB-BCrMqsQ"
+}
+```
+
+The output binding is similar to other bindings and can be used to send message to either:
+* Send messages to all connected clients.
+* Authenticated users.
+
+In this sample, messages will be sent to all clients but you can read more information in the [documentation](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-signalr-service-output?tabs=csharp).
+
 ## License
 [MIT](LICENSE)
