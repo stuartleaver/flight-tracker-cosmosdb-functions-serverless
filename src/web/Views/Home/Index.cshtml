@@ -38,12 +38,15 @@
         <div>Squawk: {squawk}</div>\
         </div>';
 
+    let datasource;
+    let flights = [];
+
     //Wait until the map resources are ready.
     map.events.add('ready', function () {
         //Load the custom image icon into the map resources.
-        map.imageSprite.add('airplane-ascent', 'https://localhost:5001/images/' + imageSpriteColour + '/airplane-ascent-128.png').then(function () {
+        map.imageSprite.add('airplane-ascent', 'https://localhost:5001/images/' + imageSpriteColour + '/airplane-128.png').then(function () {
             //Create a data source and add it to the map.
-            var datasource = new atlas.source.DataSource();
+            datasource = new atlas.source.DataSource();
             map.sources.add(datasource);
 
             //Add a layer for rendering point data as symbols.
@@ -73,30 +76,76 @@
             //Add a click event to the symbol layer.
             map.events.add('click', symbolLayer, symbolClicked);
             
-            GetFlightData().then(function (response) {
-                for (var flight of response.data) {
-                    var pin = new atlas.Shape(new atlas.data.Point([flight.longitude, flight.latitude]));
+            getConnectionInfo().then(info => {
+                // make compatible with old and new SignalRConnectionInfo
+                info.accessToken = info.accessToken || info.accessKey;
+                info.url = info.url || info.endpoint;
 
-                    pin.addProperty('name', flight.callsign);
-                    pin.addProperty('origin', flight.originCountry);
-                    pin.addProperty('longitude', flight.longitude);
-                    pin.addProperty('latitude', flight.latitude);
-                    pin.addProperty('altitude', flight.altitude);
-                    pin.addProperty('velocity', flight.velocity);
-                    pin.addProperty('rotation', flight.verticalRate);
-                    pin.addProperty('squawk', flight.squawk);
-
-                    datasource.add(pin);
+                const options = {
+                    accessTokenFactory: () => {
+                        if (info.accessToken) {
+                            return info.accessToken
+                        } else {
+                            return getConnectionInfo().then(info => {
+                                return info.accessToken
+                            })
+                        }
+                    }
                 }
-            });
+
+                const connection = new signalR.HubConnectionBuilder()
+                    .withUrl(info.url, options)
+                    .configureLogging(signalR.LogLevel.Information)
+                    .build()
+                    
+                startConnection(connection)
+
+                connection.on('newFlightData', processFlightData)
+
+                connection.onclose(() => {
+                    console.log('disconnected')
+                    setTimeout(function () { startConnection(connection) }, 5000)
+                })
+            }).catch(console.error)
+
+            function getConnectionInfo() {
+                return axios.get('https://localhost:7071/api/negotiate')
+                    .then(response => { return response.data })
+                    .catch(console.error)
+            }
+
+            function startConnection(connection) {
+                console.log('connecting...')
+                connection.start()
+                    .then(() => { console.log('connected!') })
+                    .catch(error => {
+                        console.error(error)
+                        setTimeout(() => { startConnection(connection) }, 2000)
+                    })
+            }
+            
+            function processFlightData(flight) {
+                var pin = new atlas.Shape(new atlas.data.Point([flight.Longitude, flight.Latitude]), flight.id); 
+ 
+                pin.addProperty('name', flight.Callsign); 
+                pin.addProperty('origin', flight.OriginCountry); 
+                pin.addProperty('longitude', flight.Longitude); 
+                pin.addProperty('latitude', flight.Latitude); 
+                pin.addProperty('altitude', flight.Altitude); 
+                pin.addProperty('velocity', flight.Velocity); 
+                pin.addProperty('rotation', flight.VerticalRate); 
+                pin.addProperty('squawk', flight.Squawk); 
+
+                flights[flight.id] = pin;
+
+                datasource.setShapes(Object.values(flights));
+            }
 
             function symbolClicked(e) {
                 //Make sure the event occured on a point feature.
                 if (e.shapes && e.shapes.length > 0) {
                     var content, coordinate;
 
-                    
-            
                     //Check to see if the first value in the shapes array is a Point Shape.
                     if (e.shapes[0] instanceof atlas.Shape && e.shapes[0].getType() === 'Point') {
                         var properties = e.shapes[0].getProperties();
@@ -142,13 +191,4 @@
             }
         });
     });
-
-    function GetFlightData() {
-        return axios.get('https://localhost:7071/api/getflightdata')
-        .then(function (response) {
-            return response;
-        }).catch(console.error)
-
-    
-}
 </script>
