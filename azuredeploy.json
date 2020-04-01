@@ -357,7 +357,7 @@
         "features": [
           {
             "flag": "ServiceMode",
-            "value": "Default"
+            "value": "Serverless"
           }
         ]
       },
