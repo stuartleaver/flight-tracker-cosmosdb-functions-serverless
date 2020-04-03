@@ -28,8 +28,8 @@
     });
 
     //Define an HTML template for a custom popup content laypout.
-    var popupTemplate = '<div class="customInfobox">\
-        <div class="name">Callsign: {name}</div>\
+    var popupTemplate = '<div class="flightInfobox">\
+        <div class="callsign">Callsign: {callsign}</div>\
         <div>Origin: {origin}</div>\
         <div>Long: {longitude}, Lat: {latitude}</div>\
         <div>Altitude: {altitude}</div>\
@@ -37,6 +37,9 @@
         <div>Rotation: <img src="../images/' + imageSpriteColour + '/{rotationImage}"></div>\
         <div>Squawk: {squawk}</div>\
         </div>';
+
+    //Define a HTML template for the callsign popup content layout.
+    var callsignPopupTemplate = '<div class="flightInfobox"><div class="callsign">Callsign: {callsign}</div></div>'
 
     let datasource;
     let flights = [];
@@ -57,13 +60,6 @@
 
                     //Optionally scale the size of the icon.
                     size: 0.3
-                },
-                textOptions: {
-                    //Convert the temperature property of each feature into a string and concatenate "°F".
-                    textField: ['concat', ['to-string', ['get', 'name']], '- ', ['get', 'altitude']],
-
-                    //Offset the text so that it appears on top of the icon.
-                    offset: [0, -2]
                 }
             });
             map.layers.add(symbolLayer);
@@ -73,8 +69,40 @@
                 pixelOffset: [0, -18]
             });
 
+            //Create a popup that will display the callsign on mouseover
+            callsignPopup = new atlas.Popup({
+                pixelOffset: [0, -18],
+                closeButton: false
+            })
+
             //Add a click event to the symbol layer.
             map.events.add('click', symbolLayer, symbolClicked);
+
+            //Add a hover event to the symbol layer.
+            map.events.add('mouseover', symbolLayer, function (e) {
+                //Make sure that the point exists.
+                if (e.shapes && e.shapes.length > 0) {
+                    var content, coordinate;
+                    var properties = e.shapes[0].getProperties();
+                    content = callsignPopupTemplate.replace(/{callsign}/g, properties.callsign);
+                    coordinate = e.shapes[0].getCoordinates();
+
+                    callsignPopup.setOptions({
+                        //Update the content of the popup.
+                        content: content,
+
+                        //Update the popup's position with the symbol's coordinate.
+                        position: coordinate
+                    });
+                    
+                    //Open the popup.
+                    callsignPopup.open(map);
+                }
+            });
+
+            map.events.add('mouseleave', symbolLayer, function (){
+                callsignPopup.close();
+            });
             
             getConnectionInfo().then(info => {
                 // make compatible with old and new SignalRConnectionInfo
@@ -127,7 +155,7 @@
             function processFlightData(flight) {
                 var pin = new atlas.Shape(new atlas.data.Point([flight.Longitude, flight.Latitude]), flight.id); 
  
-                pin.addProperty('name', flight.Callsign); 
+                pin.addProperty('callsign', flight.Callsign); 
                 pin.addProperty('origin', flight.OriginCountry); 
                 pin.addProperty('longitude', flight.Longitude); 
                 pin.addProperty('latitude', flight.Latitude); 
@@ -160,7 +188,7 @@
                             rotationImage = 'airplane-descent-32.png'
                         }
 
-                        content = popupTemplate.replace(/{name}/g, properties.name).replace(/{origin}/g, properties.origin).replace(/{longitude}/g, properties.longitude).replace(/{latitude}/g, properties.latitude).replace(/{altitude}/g, properties.altitude).replace(/{velocity}/g, properties.velocity).replace(/{rotationImage}/g, rotationImage).replace(/{squawk}/g, properties.squawk);
+                        content = popupTemplate.replace(/{callsign}/g, properties.callsign).replace(/{origin}/g, properties.origin).replace(/{longitude}/g, properties.longitude).replace(/{latitude}/g, properties.latitude).replace(/{altitude}/g, properties.altitude).replace(/{velocity}/g, properties.velocity).replace(/{rotationImage}/g, rotationImage).replace(/{squawk}/g, properties.squawk);
                         coordinate = e.shapes[0].getCoordinates();
                     } else if (e.shapes[0].type === 'Feature' && e.shapes[0].geometry.type === 'Point') {
                         //Check to see if the feature is a cluster.
@@ -168,7 +196,7 @@
                             content = '<div style="padding:10px;">Cluster of ' + e.shapes[0].properties.point_count + ' symbols</div>';
                         } else {
                             //Feature is likely from a VectorTileSource.
-                            content = popupTemplate.replace(/{name}/g, properties.name).replace(/{origin}/g, properties.origin).replace(/{longitude}/g, properties.longitude).replace(/{latitude}/g, properties.latitude).replace(/{altitude}/g, properties.altitude).replace(/{velocity}/g, properties.velocity).replace(/{rotationImage}/g, rotationImage).replace(/{squawk}/g, properties.squawk);
+                            content = popupTemplate.replace(/{callsign}/g, properties.callsign).replace(/{origin}/g, properties.origin).replace(/{longitude}/g, properties.longitude).replace(/{latitude}/g, properties.latitude).replace(/{altitude}/g, properties.altitude).replace(/{velocity}/g, properties.velocity).replace(/{rotationImage}/g, rotationImage).replace(/{squawk}/g, properties.squawk);
                         }
             
                         coordinate = e.shapes[0].geometry.coordinates;
