@@ -10,14 +10,17 @@
     <p>Learn about it at the <a href="https://github.com/stuartleaver/flight-tracker-cosmosdb-functions-serverless" target="new">GitHub repository</a>.</p>
 </div>
 <br />
-<div id="myMap"></div>
+<div id="flightMap"></div>
 
 <script type="text/javascript">
+    // Set the base Url for the Azure Functions
+    var baseUrl = @Html.Raw("'" + @Configuration["FunctionsBaseUrl"] + "'")
+
     // Set the colour of the images to use
-    var imageSpriteColour = 'red'
+    var imageSpriteColour = @Html.Raw("'" + @Configuration["ImageSpriteColour"] + "'")
 
     //Create an instance of the map control and set some options.
-    var map = new atlas.Map('myMap', {
+    var map = new atlas.Map('flightMap', {
         center: [-4.2119, 54.521],
         zoom: 5.5,
         language: 'en-US',
@@ -47,7 +50,7 @@
     //Wait until the map resources are ready.
     map.events.add('ready', function () {
         //Load the custom image icon into the map resources.
-        map.imageSprite.add('airplane-ascent', 'https://localhost:5001/images/' + imageSpriteColour + '/airplane-128.png').then(function () {
+        map.imageSprite.add('airplane', '../images/' + imageSpriteColour + '/airplane-128.png').then(function () {
             //Create a data source and add it to the map.
             datasource = new atlas.source.DataSource();
             map.sources.add(datasource);
@@ -56,7 +59,7 @@
             var symbolLayer = new atlas.layer.SymbolLayer(datasource, null, {
                 iconOptions: {
                     //Pass in the id of the custom icon that was loaded into the map resources.
-                    image: 'airplane-ascent',
+                    image: 'airplane',
 
                     //Optionally scale the size of the icon.
                     size: 0.3
@@ -137,7 +140,7 @@
             }).catch(console.error)
 
             function getConnectionInfo() {
-                return axios.get('https://localhost:7071/api/negotiate')
+                return axios.get(baseUrl + '/api/negotiate')
                     .then(response => { return response.data })
                     .catch(console.error)
             }
