@@ -265,7 +265,7 @@
       ]
     },
     {
-      "apiVersion": "2018-11-01",
+      "apiVersion": "2019-08-01",
       "name": "[variables('webAppPortalName')]",
       "type": "Microsoft.Web/sites",
       "location": "[variables('location')]",
@@ -286,7 +286,23 @@
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
         "hostingEnvironment": "",
         "clientAffinityEnabled": false
-      }
+      },
+      "resources": [
+        {
+          "type": "config",
+          "apiVersion": "2019-08-01",
+          "name": "appsettings",
+          "dependsOn": [
+            "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]",
+            "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+          ],
+          "properties": {
+            "KeyVaultName": "[variables('keyVaultName')]",
+            "FunctionsBaseUrl": "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2019-08-01').defaultHostName)]",
+            "ImageSpriteColour": "blue"
+          }
+        }
+      ]
     },
     {
       "type": "microsoft.insights/components",
