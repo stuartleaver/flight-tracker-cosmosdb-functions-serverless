@@ -252,8 +252,6 @@
           ],
           "properties": {
             "AzureWebJobsStorage": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-            "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING": "[concat('DefaultEndpointsProtocol=https;AccountName=', variables('storageAccountName'), ';AccountKey=', listkeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')),'2015-05-01-preview').key1)]",
-            "WEBSITE_CONTENTSHARE": "[toLower(variables('functionAppName'))]",
             "FUNCTIONS_EXTENSION_VERSION": "~3",
             "WEBSITE_NODE_DEFAULT_VERSION": "~10",
             "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('microsoft.insights/components/', variables('applicationInsightsName')), '2015-05-01').InstrumentationKey]",
@@ -263,6 +261,24 @@
           }
         }
       ]
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2018-11-01",
+      "name": "[concat(variables('functionAppName'), '/web')]",
+      "location": "UK South",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
+      ],
+      "properties": {
+        "cors": {
+          "allowedOrigins": [
+            "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('webAppPortalName')), '2019-08-01').defaultHostName)]"
+          ],
+          "supportCredentials": false
+        }
+      }
     },
     {
       "apiVersion": "2019-08-01",
@@ -368,6 +384,10 @@
       "name": "[variables('signalRName')]",
       "apiVersion": "2018-10-01",
       "location": "[variables('location')]",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
+      ],
       "properties": {
         "hostNamePrefix": "[variables('signalRName')]",
         "features": [
@@ -375,7 +395,13 @@
             "flag": "ServiceMode",
             "value": "Serverless"
           }
-        ]
+        ],
+        "cors": {
+          "allowedOrigins": [
+            "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('functionAppName')), '2019-08-01').defaultHostName)]",
+            "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('webAppPortalName')), '2019-08-01').defaultHostName)]"
+          ]
+        }
       },
       "sku": {
         "name": "Free_F1",
