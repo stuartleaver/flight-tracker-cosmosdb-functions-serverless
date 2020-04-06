@@ -222,5 +222,32 @@ The output binding is similar to other bindings and can be used to send message 
 
 In this sample, messages will be sent to all clients but you can read more information in the [documentation](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-signalr-service-output?tabs=csharp).
 
+## App Service
+All the resources are in place and so it is just necessary to host the site now. While this could be done using IIS on a VM for example, this would lead to unnecessary management of infrastructure. Plus, this is a serverless sample! A much better solution is to use a resource call an [App Service](https://azure.microsoft.com/en-gb/services/app-service/). This is the definition of an App Service from the [documentation](https://docs.microsoft.com/en-gb/azure/app-service/overview):
+>Azure App Service is an HTTP-based service for hosting web applications, REST APIs, and mobile back ends. You can develop in your favorite language, be it .NET, .NET Core, Java, Ruby, Node.js, PHP, or Python. Applications run and scale with ease on both Windows and Linux-based environments. For Linux-based environments, see [App Service on Linux](https://docs.microsoft.com/en-gb/azure/app-service/containers/app-service-linux-intro).
+>
+>App Service not only adds the power of Microsoft Azure to your application, such as security, load balancing, autoscaling, and automated management. You can also take advantage of its DevOps capabilities, such as continuous deployment from Azure DevOps, GitHub, Docker Hub, and other sources, package management, staging environments, custom domain, and SSL certificates.
+>
+>With App Service, you pay for the Azure compute resources you use. The compute resources you use is determined by the App Service plan that you run your apps on. For more information, see [Azure App Service plans overview](https://docs.microsoft.com/en-gb/azure/app-service/overview-hosting-plans).
+
+Although not used in this sample, an App Service is optimised for DevOps so automated deployments can be setup. Also, auto scaling will allow the App Service to scale out and in based on demand and you only pay for what you use. For example, should you have a site that has increased demand just a few times a year, an App Service will scale out when needed and then back in when the demand returns to normal.
+
+## Cross-Origin Resource Sharing (CORS)
+Put together, the following resources need to communicate and they are all on different domains:
+
+* Function App (flighttrackerxyz-functionapp.azurewebsites.net)
+* SignalR (flighttrackerxyz.service.signalr.net)
+* App Service (flighttrackerxyx-webapp.azurewebsites.net)
+
+The basic concept behind CORS is that it allows an app running under one domain, access to resources in another domain.
+
+This is made simple by each resource having a blade to specify which domains should have access, but it can also be added via other methods such as ARM Templates (is in this sample).
+
+Here is the CORS setup of the Function App. As you can see, the rule is allowing requests from the domain of the App Service access to resources.
+
+![cors-function-app](assets/cors-function-app.png)
+
+If you want to say for example, run the web app locally, but connection to the Function App in Azure, you will need to remember to add localhost in the correct places.
+
 ## License
 [MIT](LICENSE)
