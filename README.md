@@ -249,5 +249,10 @@ Here is the CORS setup of the Function App. As you can see, the rule is allowing
 
 If you want to say for example, run the web app locally, but connection to the Function App in Azure, you will need to remember to add localhost in the correct places.
 
+## Limitations
+While this is a working sample, it does use the SKU's that are either free or the lowest cost. This in turn does bring in some limitations, such as the number of messages that SignalR will all in a 24 hour period.
+
+If you wish to use the sample on a larger scale, then it is just a case in scaling up the SKU's.
+
 ## License
 [MIT](LICENSE)
