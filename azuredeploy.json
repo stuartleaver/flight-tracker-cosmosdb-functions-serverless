@@ -15,31 +15,32 @@
         "description": "Specifies the Azure Active Directory tenant ID that should be used for authenticating requests to the key vault. Get it by using Get-AzSubscription cmdlet."
       }
     },
-    "objectId": {
+    "KeyVaultAccessPolicyUserObjectId": {
       "type": "String",
       "metadata": {
-        "description": "Specifies the object ID of a user, service principal or security group in the Azure Active Directory tenant for the vault. The object ID must be unique for the list of access policies. Get it by using Get-AzADUser or Get-AzADServicePrincipal cmdlets."
+        "description": "ObjectId for the Azure AD User running the Template Deployment. The object ID must be unique for the list of access policies. Get it by using Get-AzADUser or Get-AzADServicePrincipal cmdlets."
       }
     }
   },
   "variables": {
-    "name_suffix": "[uniqueString(resourceGroup().id)]",
-    "cosmosDbAccountName": "[concat(parameters('appName'), 'db')]",
-    "keyVaultName": "[parameters('appName')]",
-    "functionAppName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
-    "hostingPlanName": "[concat(variables('functionAppName'), '-plan')]",
-    "storageAccountName": "[substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24)]",
-    "applicationInsightsName": "[parameters('appName')]",
     "location": "[resourceGroup().location]",
+    "nameSuffix": "[uniqueString(resourceGroup().id)]",
+    "uniqueAppName": "[if(greater(length(concat(parameters('appName'), variables('nameSuffix'))), 24), substring(concat(parameters('appName'), variables('nameSuffix')), 0, 24), concat(parameters('appName'), variables('nameSuffix')))]",
+    "cosmosDbAccountName": "[concat(variables('uniqueAppName'), '-db')]",
     "cosmosDbApiVersion": "[providers('Microsoft.DocumentDB', 'databaseAccounts').apiVersions[0]]",
     "cosmosDbConnectionStringSecretName": "CosmosDbConnectionString",
     "cosmosDbDatabaseName": "flighttracker",
     "cosmosDbDatabaseContainerName": "flights",
-    "webAppPortalName": "[concat(substring(concat(parameters('appName'), uniquestring(resourceGroup().id)), 0, 24), '-webapp')]",
+    "keyVaultName": "[if(greater(length(concat(variables('uniqueAppName'), '-kv')), 24), substring(concat(variables('uniqueAppName'), '-kv'), 0, 24), concat(variables('uniqueAppName'), '-kv'))]",
+    "functionAppName": "[concat(variables('uniqueAppName'), '-funcapp')]",
+    "functionAppHostingPlanName": "[if(greater(length(concat(variables('functionAppName'), '-plan')), 40), substring(concat(variables('functionAppName'), '-plan'), 0, 40), concat(variables('functionAppName'), '-plan'))]",
+    "storageAccountName": "[variables('uniqueAppName')]",
+    "applicationInsightsName": "[concat(variables('uniqueAppName'), '-appinsights')]",
+    "webAppPortalName": "[concat(variables('uniqueAppName'), '-webapp')]",
     "appServicePlanName": "[concat(variables('webAppPortalName'), '-plan')]",
-    "mapsAccountName": "[concat(parameters('appName'), '-map')]",
+    "mapsAccountName": "[concat(variables('uniqueAppName'), '-map')]",
     "mapsAccountPrimaryKeySecretName": "MapsPrimaryKey",
-    "signalRName": "[concat(parameters('appName'), '-', variables('name_suffix'))]",
+    "signalRName": "[concat(variables('uniqueAppName'), '-signalr')]",
     "signalRConnectionStringSecretName": "SignalRConnectionString"
   },
   "resources": [
@@ -132,7 +133,7 @@
         "tenantId": "[parameters('tenantId')]",
         "accessPolicies": [
           {
-            "objectId": "[parameters('objectId')]",
+            "objectId": "[parameters('KeyVaultAccessPolicyUserObjectId')]",
             "tenantId": "[parameters('tenantId')]",
             "permissions": {
               "secrets": [
@@ -192,15 +193,15 @@
     {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2018-02-01",
-      "name": "[variables('hostingPlanName')]",
+      "name": "[variables('functionAppHostingPlanName')]",
       "location": "[variables('location')]",
-      "kind": "linux",
       "sku": {
         "name": "Y1",
         "tier": "Dynamic"
       },
+      "kind": "linux",
       "properties": {
-        "name": "[variables('hostingPlanName')]",
+        "name": "[variables('functionAppHostingPlanName')]",
         "computeMode": "Dynamic",
         "reserved": true
       }
@@ -210,11 +211,14 @@
       "apiVersion": "2018-02-01",
       "name": "[variables('appServicePlanName')]",
       "location": "[variables('location')]",
-      "kind": "linux",
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/serverfarms', variables('functionAppHostingPlanName'))]"
+      ],
       "sku": {
         "name": "F1",
         "tier": "Free"
       },
+      "kind": "linux",
       "properties": {
         "name": "[variables('appServicePlanName')]",
         "reserved": true
@@ -226,14 +230,14 @@
       "name": "[variables('functionAppName')]",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]"
+        "[resourceId('Microsoft.Web/serverfarms', variables('functionAppHostingPlanName'))]"
       ],
       "kind": "functionapp,linux",
       "identity": {
         "type": "SystemAssigned"
       },
       "properties": {
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('hostingPlanName'))]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppHostingPlanName'))]",
         "siteConfig": {
           "reserved": true
         }
@@ -281,11 +285,10 @@
       }
     },
     {
+      "type": "Microsoft.Web/sites",
       "apiVersion": "2019-08-01",
       "name": "[variables('webAppPortalName')]",
-      "type": "Microsoft.Web/sites",
       "location": "[variables('location')]",
-      "tags": null,
       "dependsOn": [
         "[concat('Microsoft.Web/serverfarms/', variables('appServicePlanName'))]"
       ],
@@ -352,6 +355,7 @@
       "name": "[concat(variables('keyVaultName'), '/', variables('mapsAccountPrimaryKeySecretName'))]",
       "location": "[variables('location')]",
       "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
         "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
       ],
       "properties": {
@@ -364,6 +368,7 @@
       "name": "[concat(variables('keyVaultName'), '/', variables('signalRConnectionStringSecretName'))]",
       "location": "[variables('location')]",
       "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', variables('keyVaultName'))]",
         "[resourceId('Microsoft.SignalRService/SignalR', variables('signalRName'))]"
       ],
       "properties": {
@@ -371,23 +376,27 @@
       }
     },
     {
+      "type": "Microsoft.Maps/accounts",
       "apiVersion": "2018-05-01",
       "name": "[variables('mapsAccountName')]",
       "location": "global",
-      "type": "Microsoft.Maps/accounts",
       "sku": {
         "name": "S0"
       }
     },
     {
       "type": "Microsoft.SignalRService/SignalR",
-      "name": "[variables('signalRName')]",
       "apiVersion": "2018-10-01",
+      "name": "[variables('signalRName')]",
       "location": "[variables('location')]",
       "dependsOn": [
         "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]",
         "[resourceId('Microsoft.Web/sites', variables('webAppPortalName'))]"
       ],
+      "sku": {
+        "name": "Free_F1",
+        "capacity": "1"
+      },
       "properties": {
         "hostNamePrefix": "[variables('signalRName')]",
         "features": [
@@ -402,10 +411,6 @@
             "[concat('https://', reference(resourceId('Microsoft.Web/sites', variables('webAppPortalName')), '2019-08-01').defaultHostName)]"
           ]
         }
-      },
-      "sku": {
-        "name": "Free_F1",
-        "capacity": "1"
       }
     }
   ],
