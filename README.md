@@ -250,7 +250,11 @@ Here is the CORS setup of the Function App. As you can see, the rule is allowing
 If you want to say for example, run the web app locally, but connection to the Function App in Azure, you will need to remember to add localhost in the correct places.
 
 ## Limitations
-While this is a working sample, it does use the SKU's that are either free or the lowest cost. This in turn does bring in some limitations, such as the number of messages that SignalR will all in a 24 hour period.
+While this is a working sample, it does use the tiers that are either free or the lowest cost. This in turn does bring in some limitations, such as, but not limited to:
+* The Azure Cosmos DB free tier is limited to 400 RU/s throughput and 5 GBs storage per month ([Azure Cosmos DB pricing](https://azure.microsoft.com/en-gb/pricing/details/cosmos-db/)).
+* The number of messages that SignalR will all in a 24 hour period. The free tier is limed to one unit with 20 concurrent connections per unit and 20,000 messages per day ([Azure SignalR Service pricing](https://azure.microsoft.com/en-gb/pricing/details/signalr-service/)).
+
+The sample could be changed to include flights from all over the world by just changing the Function that calls the OpenSky Network, however, the above limits could come into play.
 
 If you wish to use the sample on a larger scale, then it is just a case in scaling up the SKU's.
 
