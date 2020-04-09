@@ -240,7 +240,8 @@
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('functionAppHostingPlanName'))]",
         "siteConfig": {
           "reserved": true
-        }
+        },
+        "httpsOnly": true
       },
       "resources": [
         {
@@ -304,7 +305,8 @@
         },
         "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]",
         "hostingEnvironment": "",
-        "clientAffinityEnabled": false
+        "clientAffinityEnabled": false,
+        "httpsOnly": true
       },
       "resources": [
         {
