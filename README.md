@@ -125,11 +125,15 @@ Azure allows you to use Key Vault references for App Service and Azure Functions
 The Function App needs to talk to the KeyVault. The KeyVault being what it is, does not allow blanket access. It is therefore required to allow an app to access the KeyVault via Azure Active Directory (AAD).
 
 From the [How to use managed identities for App Service and Azure Functions](https://docs.microsoft.com/en-gb/azure/app-service/overview-managed-identity?tabs=dotnet):
->A managed identity from Azure Active Directory (AAD) allows your app to easily access other AAD-protected >resources such as Azure Key Vault. The identity is managed by the Azure platform and does not require you to >provision or rotate any secrets. For more about managed identities in AAD, see Managed identities for Azure >resources.
+>A managed identity from Azure Active Directory (AAD) allows your app to easily access other AAD-protected resources such as Azure Key Vault. The identity is managed by the Azure platform and does not require you to provision or rotate any secrets. For more about managed identities in AAD, see Managed identities for Azure resources.
 >
 >Your application can be granted two types of identities:
 >* A **system-assigned identity** is tied to your application and is deleted if your app is deleted. An app can only have >one system-assigned identity.
 >* A **user-assigned identity** is a standalone Azure resource that can be assigned to your app. An app can have multiple >user-assigned identities.
+
+Although showing a Virtual Machine, this diagram is a good representation of how MSI works.
+
+![azure-key-vault-msi](assets/azure-key-vault-msi.png)
 
 The ARM Template creates a system-assigned identity and allows the `Get` permission for `Secrets` within the KeyVault.
 
@@ -257,6 +261,19 @@ While this is a working sample, it does use the tiers that are either free or th
 The sample could be changed to include flights from all over the world by just changing the Function that calls the OpenSky Network, however, the above limits could come into play.
 
 If you wish to use the sample on a larger scale, then it is just a case in scaling up the SKU's.
+
+## Conclusion
+This sample takes Azure Functions, Cosmos DB, SignalR, Key Vault and an App Service to show how they can all be used together to provide a real time solution in a very easy manor. It shows how easy the bindings and triggers make Functions to work with. How the Cosmos DB Change Feed is easy to use and how SignalR can help give that real time element. Also, a Key Vault to keep all secrets (Ok, the maps secret is discussed above), secret.
+
+If you do try it out, you should see a map similar to the following. It has been speeded up as the Function that queries the OpenSky Network triggers every 5 seconds.
+
+![map-with-real-time-flight-details-updates](assets/map-with-real-time-flight-details-updates.gif)
+
+As you can probably tell, there is a lot more that could be done, but it shows how a real time solution can be built. Here are a couple of examples on improvements and additions:
+* When zooming in and out of the map and moving around, get the Function to change the OpenKey Sky API call to use a new set of latitude and longitude bounds. This would allows the user to then see flights on the new view of the map.
+* Introduce alerting. Say you want to be notified of when a place enters a certain area. Build a new Function with an input from the Cosmos DB Change Feed, and if the flight is within a certain area, trigger an "alert". Maybe that could be sending an SMS message with [Twillio](https://www.twilio.com) for with there is a Function [binding](https://docs.microsoft.com/en-us/azure/azure-functions/functions-bindings-twilio?tabs=csharp).
+
+If you would like to see an enhancement or have any suggestions, please, do submit them.
 
 ## License
 [MIT](LICENSE)
