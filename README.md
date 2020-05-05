@@ -10,7 +10,48 @@ Below are the parameters which can be user configured in the parameters file inc
 
 - **Application Name:** Enter the name you wish to call the application. This name will be used as a base for the resources which will get created..
 - **Tenant Id:** Enter the Azure Active Directory tenant ID that should be used for authenticating requests to the key vault. The default is `[subscription().tenantId]` which should be sufficient in most cases.
-- **Multi-Master:** Enter the Object Id of a user, service principal or security group in the Azure Active Directory tenant for the Key Vault. The object ID must be unique for the list of access policies. Get it by using Get-AzADUser or Get-AzADServicePrincipal cmdlets. You can also use the following CLI command to get the objectID of the loged in user: `az ad signed-in-user show --query objectId`
+- **Key Vault Access Policy User Object:** Enter the Object Id of a user, service principal or security group in the Azure Active Directory tenant for the Key Vault. The object ID must be unique for the list of access policies. Get it by using Get-AzADUser or Get-AzADServicePrincipal cmdlets. You can also use the following CLI command to get the objectID of the loged in user: `az ad signed-in-user show --query objectId`
+
+### Deploying the Code
+Once all of the resources have been created, it is then time to deploy the Function App and App Service code. This can easily be done through the use of [Visual Studio Code](https://code.visualstudio.com) and the extension available in the following extension pack:
+* [.NET & Azure Extension Pack](https://marketplace.visualstudio.com/items?itemName=stuartleaver.dotnet-azure-extensionpack) (I know the author!)
+
+If you would prefer to install the extensions separately, you can do so:
+* [Azure Account](https://marketplace.visualstudio.com/items?itemName=ms-vscode.azure-account)
+* [Azure Functions](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azurefunctions)
+* [Azure App Service](https://marketplace.visualstudio.com/items?itemName=ms-azuretools.vscode-azureappservice)
+
+#### Deploying the Function App
+1. Open the `[location of the cloned repo]\src\functions` folder in VS Code
+
+  ![deployment-functionapp-explorer](assets/deployment-functionapp-explorer.png)
+
+2. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure Functions explorer.
+
+3. Select the button to deploy
+
+  ![deploy-functionapp](assets/deploy-functionapp.png)
+
+4. Choose the Function App that was created by the ARM Template.
+
+5. Click Deploy.
+
+#### Deploying the App Service
+1. Open the `[location of the cloned repo]\src\web` folder in VS Code
+
+  ![deployment-appservice-explorer](assets/deployment-appservice-explorer.png)
+
+2. Sign in to your Azure Account by clicking "Sign in to Azure..." in the Azure App Service explorer.
+
+3. Select the button to deploy
+
+  ![deploy-functionapp](assets/deploy-appservice.png)
+
+4. Choose the App Service that was created by the ARM Template.
+
+5. Click Deploy.
+
+If not already known, you should then be able to browse to the App Service in the Azure Portal, and locate the URL in the `Overview` blade.
 
 ## Architecture
 This sample is a real-time app that displays flight status details. This can be achieved through the use of [Azure Functions](https://docs.microsoft.com/en-gb/azure/azure-functions/) and [Azure SignalR](https://docs.microsoft.com/en-gb/azure/azure-signalr/). The following image describes the solution that will provide this ability:
